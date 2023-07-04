@@ -9,8 +9,8 @@ import com.usercenter.common.ErrorCode;
  */
 public class BusinessException extends RuntimeException {
 
-    private final Integer code;
-    private final String description;
+    private Integer code;
+    private String description;
 
     public BusinessException(Integer code, String message, String description) {
         super(message);
@@ -22,6 +22,12 @@ public class BusinessException extends RuntimeException {
         super(errorCode.getMessage());
         this.code = errorCode.getCode();
         this.description = errorCode.getDescription();
+    }
+
+    public BusinessException(ErrorCode systemError, String desc) {
+        super(desc);
+        this.code = systemError.getCode();
+        this.description = desc;
     }
 
     public Integer getCode() {

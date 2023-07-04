@@ -10,10 +10,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @EnableScheduling
-public class UserCenterBackendApplication {
+public class BonfireBackendApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(UserCenterBackendApplication.class, args);
+        SpringApplication.run(BonfireBackendApplication.class, args);
     }
 
 }
