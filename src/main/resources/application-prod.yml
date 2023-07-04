@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: user-center
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    #    修改为自己的服务器IP地址
+    url: jdbc:mysql://IP_ADDRESS:3306/user_center?serverTimezone=UTC&characterEncoding=utf8&useUnicode=true&useSSL=false
+    #    修改为自己的服务器的数据库的用户名
+    username: USER_NAME
+    #    修改为自己的服务器的数据库的密码
+    password: PASSWORD
+  session:
+    timeout: 86400 # session失效时间 1 天
+  servlet:
+    multipart:
+      max-file-size: 5MB # 单个文件大小 默认 1MB
+      max-request-size: 50MB # 总文件大小  默认 10MB
+
+server:
+  port: 8081
+  servlet:
+    context-path: /api
+upload-img:
+  path: /app/images/ # 上传文件路径
+
+logging:
+  level:
+    root: error
+    sql: error
+    web: error
+mybatis-plus:
+  global-config:
+    banner: off
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+sa-token:
+  is-print: off

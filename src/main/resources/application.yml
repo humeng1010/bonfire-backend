@@ -1,0 +1,44 @@
+spring:
+  profiles:
+    active: dev
+  application:
+    name: user-center
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/star_project?serverTimezone=UTC&characterEncoding=utf8&useUnicode=true&useSSL=false
+    username: root
+    password: 12345678
+  jackson:
+    default-property-inclusion: non_null
+    date-format: yyyy-MM-dd HH:mm:ss
+  session:
+    timeout: 86400 # session失效时间 单位分钟 60天
+    store-type: redis # 设置session的存储仓库为redis
+  servlet:
+    multipart:
+      max-file-size: 10MB # 单个文件大小 默认 1MB
+      max-request-size: 100MB # 总文件大小  默认 10MB
+  # redis配置
+  redis:
+    port: 6379
+    host: localhost
+    database: 0
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+mybatis-plus:
+  mapper-locations: classpath:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+  global-config:
+    db-config:
+      logic-delete-field: isDelete
+      logic-not-delete-value: 0 # 未删除
+      logic-delete-value: 1 # 已删除
+
+upload-img:
+  path: /Users/humeng/Github/user-center-project/images/ # 上传文件路径
