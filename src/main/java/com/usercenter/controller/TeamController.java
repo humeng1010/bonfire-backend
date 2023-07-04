@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.usercenter.common.BaseResponse;
 import com.usercenter.common.ErrorCode;
 import com.usercenter.entity.Team;
+import com.usercenter.entity.User;
 import com.usercenter.entity.dto.TeamQuery;
+import com.usercenter.entity.request.TeamAddRequest;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.service.TeamService;
 import com.usercenter.service.UserService;
@@ -39,16 +41,16 @@ public class TeamController {
     private HttpServletRequest httpServletRequest;
 
     @PostMapping("/add")
-    public BaseResponse<Long> addTeam(@RequestBody Team team) {
-        if (team == null) {
+    public BaseResponse<Long> addTeam(@RequestBody TeamAddRequest teamAddRequest) {
+        if (teamAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean save = teamService.save(team);
-        if (!save) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "插入失败");
-        }
-        return BaseResponse.ok(team.getId(), "创建房间成功");
+        // 获取当前用户
+        User loginUser = userService.getLoginUser(httpServletRequest);
 
+        Team team = new Team();
+        BeanUtils.copyProperties(teamAddRequest, team);
+        return teamService.addTeam(team, loginUser);
     }
 
     @DeleteMapping("/delete")
@@ -114,7 +116,7 @@ public class TeamController {
 
         Team team = new Team();
         BeanUtils.copyProperties(teamQuery, team);
-        
+
         Long currentPage = teamQuery.getCurrentPage();
         if (currentPage == null) currentPage = 1L;
 

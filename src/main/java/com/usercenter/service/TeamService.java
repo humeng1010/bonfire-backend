@@ -1,7 +1,9 @@
 package com.usercenter.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.usercenter.common.BaseResponse;
 import com.usercenter.entity.Team;
+import com.usercenter.entity.User;
 
 /**
  * @author humeng
@@ -10,4 +12,6 @@ import com.usercenter.entity.Team;
  */
 public interface TeamService extends IService<Team> {
 
+
+    BaseResponse<Long> addTeam(Team team, User user);
 }

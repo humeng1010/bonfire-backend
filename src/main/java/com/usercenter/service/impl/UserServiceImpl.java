@@ -357,6 +357,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
+     * 从session中获取当前登录的用户
+     * session保存到redis中了
+     *
+     * @param request
+     * @return
+     */
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+
+        if (request == null) {
+            return null;
+        }
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATUS);
+        if (userObj == null) {
+            throw new BusinessException(NOT_LOGIN_ERROR);
+        }
+        return (User) userObj;
+    }
+
+    /**
      * 通过SQL 根据标签查询用户 废弃的方法
      *
      * @param currentPage 当前页

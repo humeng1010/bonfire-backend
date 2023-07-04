@@ -7,4 +7,6 @@ public interface RedisConstant {
     // 单位分钟
     Long USER_RECOMMEND_TTL = 60L;
 
+    String ADD_TEAM_KEY = "user-center:team:lock:";
+
 }
