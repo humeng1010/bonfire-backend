@@ -6,6 +6,7 @@ import com.usercenter.entity.Team;
 import com.usercenter.entity.User;
 import com.usercenter.entity.dto.TeamQuery;
 import com.usercenter.entity.request.TeamJoinRequest;
+import com.usercenter.entity.request.TeamQuitRequest;
 import com.usercenter.entity.request.TeamUpdateRequest;
 import com.usercenter.entity.vo.TeamUserVO;
 
@@ -40,5 +41,7 @@ public interface TeamService extends IService<Team> {
      * @return
      */
     BaseResponse<Boolean> joinTeam(TeamJoinRequest teamJoinRequest, HttpServletRequest httpServletRequest);
+
+    BaseResponse<Boolean> quitTeam(TeamQuitRequest teamQuitRequest, HttpServletRequest httpServletRequest);
 
 }

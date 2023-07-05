@@ -1,5 +1,6 @@
 package com.usercenter.service.impl;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -12,6 +13,7 @@ import com.usercenter.entity.UserTeam;
 import com.usercenter.entity.dto.TeamQuery;
 import com.usercenter.entity.enums.TeamStatusEnum;
 import com.usercenter.entity.request.TeamJoinRequest;
+import com.usercenter.entity.request.TeamQuitRequest;
 import com.usercenter.entity.request.TeamUpdateRequest;
 import com.usercenter.entity.vo.TeamUserVO;
 import com.usercenter.entity.vo.UserVO;
@@ -322,6 +324,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             }
         }
 
+        // TODO 考虑加分布式锁防止用户加入超过5个有效的队伍 考虑查询的优化先后顺序 控制加锁的粒度
         // 1. 用户最多加入 5 个队伍
         // 根据userId查询关系表中该用户加入了几个有效的队伍
         // 先查出有几个队伍,获取队伍ID,再根据队伍ID查未过期时间的有几个
@@ -339,9 +342,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         // 6.禁止加入满员的队伍
         Integer maxNum = team.getMaxNum();
         // 获取当前队伍有多少人(多少记录)
-        LambdaQueryWrapper<UserTeam> userTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userTeamLambdaQueryWrapper.eq(UserTeam::getTeamId, teamId);
-        long currentNum = userTeamService.count(userTeamLambdaQueryWrapper);
+        long currentNum = getTeamCurrentCountById(teamId);
         if (currentNum >= maxNum) {
             throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX, "队伍已满");
         }
@@ -364,6 +365,100 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
         return BaseResponse.ok(userTeamService.save(userTeam));
 
+    }
+
+    /**
+     * 根据队伍id获取当前队伍有多少人
+     *
+     * @param teamId
+     * @return
+     */
+    private long getTeamCurrentCountById(Long teamId) {
+        LambdaQueryWrapper<UserTeam> userTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        userTeamLambdaQueryWrapper.eq(UserTeam::getTeamId, teamId);
+        return userTeamService.count(userTeamLambdaQueryWrapper);
+    }
+
+    /**
+     * 当前用户退出队伍
+     *
+     * @param teamQuitRequest    请求体 包含了队伍的id
+     * @param httpServletRequest request
+     * @return 是否退出成功
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BaseResponse<Boolean> quitTeam(TeamQuitRequest teamQuitRequest, HttpServletRequest httpServletRequest) {
+        if (teamQuitRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        String message = null;
+        User loginUser = userService.getLoginUser(httpServletRequest);
+        Long userId = loginUser.getId();
+
+        Long teamId = teamQuitRequest.getTeamId();
+        if (teamId == null || teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+
+        Team team = this.getById(teamId);
+        // 判断要退出的队伍是否存在,不存在抛出异常
+        if (team == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+
+        // 判断当前用户有没有在该队伍中,否则抛出异常
+        LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(UserTeam::getTeamId, teamId)
+                .eq(UserTeam::getUserid, userId);
+        long count = userTeamService.count(queryWrapper);
+        if (count < 1) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "您已经不在该队伍中");
+        }
+
+        // 判断当前队伍还有几个人
+        long teamCurrentCount = getTeamCurrentCountById(teamId);
+        // 如果只有1人,则解散队伍,删除队伍和关系
+        if (teamCurrentCount == 1) {
+            // 删除队伍
+            this.removeById(teamId);
+            // 根据队伍id删除用户和队伍关系数据
+            userTeamService.update().eq("teamId", teamId).remove();
+            message = "您已解散队伍";
+        } else {
+            // 如果队伍不是1人
+            // 获取该队伍的队长id
+            Long captainId = team.getUserId();
+            if (!Objects.equals(userId, captainId)) {
+                //    不是队长,直接退出:删除该用户-队伍关系表数据;
+                userTeamService.update().eq("userId", userId).eq("teamId", teamId).remove();
+                message = "您已退出队伍";
+            } else {
+                //    是队长,而且当前队伍人数大于1
+                //    先查询关系表中该队伍的成员
+                LambdaQueryWrapper<UserTeam> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+                teamLambdaQueryWrapper.eq(UserTeam::getTeamId, teamId);
+                List<UserTeam> teamMembers = userTeamService.list(teamLambdaQueryWrapper);
+                // 根据加入的时间排序,获取到第二个用户的ID
+                teamMembers.sort((o1, o2) -> DateUtil.compare(o1.getJoinTime(), o2.getJoinTime()));
+                if (teamMembers.isEmpty() || teamMembers.size() < 2) {
+                    throw new BusinessException(ErrorCode.NULL_ERROR, "无法操作quit-team:440");
+                }
+                UserTeam userTeam = teamMembers.get(1);
+                Long secondJoinTeamUserId = userTeam.getUserid();
+
+                //    修改队伍表的userId为该用户的ID
+                this.update().set("userId", secondJoinTeamUserId).eq("id", teamId).update();
+
+                //    队长退出队伍
+                userTeamService.update().eq("userId", userId).eq("teamId", teamId).remove();
+
+                message = "您已转让队伍";
+            }
+        }
+
+
+        return BaseResponse.ok(true, message);
     }
 }
 

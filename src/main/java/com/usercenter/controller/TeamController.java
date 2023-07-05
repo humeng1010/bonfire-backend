@@ -10,6 +10,7 @@ import com.usercenter.entity.User;
 import com.usercenter.entity.dto.TeamQuery;
 import com.usercenter.entity.request.TeamAddRequest;
 import com.usercenter.entity.request.TeamJoinRequest;
+import com.usercenter.entity.request.TeamQuitRequest;
 import com.usercenter.entity.request.TeamUpdateRequest;
 import com.usercenter.entity.vo.TeamUserVO;
 import com.usercenter.exception.BusinessException;
@@ -101,6 +102,14 @@ public class TeamController {
         }
 
         return teamService.joinTeam(teamJoinRequest, httpServletRequest);
+    }
+
+    @PostMapping("/quit")
+    public BaseResponse<Boolean> quitTeam(@RequestBody TeamQuitRequest teamQuitRequest) {
+        if (teamQuitRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        return teamService.quitTeam(teamQuitRequest, httpServletRequest);
     }
 
     @GetMapping("/list")
