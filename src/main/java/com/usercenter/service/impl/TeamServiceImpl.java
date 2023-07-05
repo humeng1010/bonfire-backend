@@ -13,6 +13,7 @@ import com.usercenter.exception.BusinessException;
 import com.usercenter.mapper.TeamMapper;
 import com.usercenter.service.TeamService;
 import com.usercenter.service.UserTeamService;
+import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -84,8 +85,10 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
 
         // 如果用户疯狂点击count刚开始是1 多个线程同时进来发现count都是1 都会通过,则会出现超过5个队伍的情况,解决方案使用redisson分布式锁
+        RLock lock = redissonClient.getLock(ADD_TEAM_KEY + user.getId());
         try {
-            redissonClient.getLock(ADD_TEAM_KEY + user.getId()).lock();
+            // 具有自动续期机制
+            lock.lock();
 
             LambdaQueryWrapper<Team> queryWrapper = new LambdaQueryWrapper<>();
             Long userId = user.getId();
@@ -117,7 +120,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             return BaseResponse.ok(teamId);
 
         } finally {
-            redissonClient.getLock(ADD_TEAM_KEY + user.getId()).unlock();
+            lock.unlock();
         }
 
     }
