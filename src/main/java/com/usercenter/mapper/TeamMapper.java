@@ -2,7 +2,11 @@ package com.usercenter.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.usercenter.entity.Team;
+import com.usercenter.entity.vo.TeamMemberVO;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * @author humeng
@@ -12,6 +16,7 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 public interface TeamMapper extends BaseMapper<Team> {
+    List<TeamMemberVO> selectTeamWithMemberInfo(@Param("id") Integer id);
 
 }
 

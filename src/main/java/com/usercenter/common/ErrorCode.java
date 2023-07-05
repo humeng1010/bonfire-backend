@@ -15,6 +15,8 @@ public enum ErrorCode {
     ACCOUNT_REPEAT(40201, "账户重复", ""),
 
     ACCOUNT_STATUS_DISABLE(40202, "账户被禁用", ""),
+    
+    TEAM_COUNT_OVER_MAX(40301, "队伍最大不超过5", ""),
     SERVICE_ERROR(50000, "操作失败", ""),
 
     SYSTEM_ERROR(50001, "", "系统内部异常");

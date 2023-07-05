@@ -39,6 +39,7 @@ mybatis-plus:
       logic-delete-field: isDelete
       logic-not-delete-value: 0 # 未删除
       logic-delete-value: 1 # 已删除
+  type-aliases-package: com.usercenter.entity
 
 upload-img:
   path: /Users/humeng/Github/user-center-project/images/ # 上传文件路径

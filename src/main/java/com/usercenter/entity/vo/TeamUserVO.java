@@ -1,25 +1,19 @@
-package com.usercenter.entity.dto;
+package com.usercenter.entity.vo;
 
-import com.usercenter.common.PageRequest;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
+import java.util.Date;
 
 /**
- * 队伍查询封装类
+ * 队伍信息封装类
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class TeamQuery extends PageRequest {
+public class TeamUserVO {
     /**
      * id
      */
     private Long id;
 
-
-    /**
-     * 搜索文本,同时对队伍名称和描述搜索
-     */
-    private String searchText;
 
     /**
      * 队伍名称
@@ -36,6 +30,10 @@ public class TeamQuery extends PageRequest {
      */
     private Integer maxNum;
 
+    /**
+     * 过期时间
+     */
+    private Date expireTime;
 
     /**
      * 用户id
@@ -46,6 +44,18 @@ public class TeamQuery extends PageRequest {
      * 0 - 公开，1 - 私有，2 - 加密
      */
     private Integer status;
+
+
+    /**
+     * 更新时间
+     */
+    private Date updateTime;
+
+
+    /**
+     * 创建人
+     */
+    UserVO createUser;
 
 
 }

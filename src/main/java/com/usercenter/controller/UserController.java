@@ -194,7 +194,7 @@ public class UserController {
      *
      * @return true: admin user; false: other user
      */
-    private Boolean isAdmin() {
+    public Boolean isAdmin() {
         User user = (User) httpServletRequest.getSession().getAttribute(USER_LOGIN_STATUS);
         return user != null && Objects.equals(user.getUserRole(), UserConstant.ADMIN_ROLE);
     }

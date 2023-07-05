@@ -24,4 +24,20 @@
         status,password,createTime,
         updateTime,isDelete
     </sql>
+
+    <select id="selectTeamWithMemberInfo" resultType="teamMemberVO">
+        select t.id,
+               t.name,
+               t.userId,
+               u.id as memberId,
+               u.username,
+               u.userAccount,
+               u.avatarUrl,
+               u.gender,
+               u.tags
+        from team t
+                 left join user_team ut on t.id = ut.teamId
+                 left join user u on u.id = ut.userId
+        where t.id = #{id};
+    </select>
 </mapper>

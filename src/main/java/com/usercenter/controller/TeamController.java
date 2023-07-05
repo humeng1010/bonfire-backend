@@ -9,6 +9,9 @@ import com.usercenter.entity.Team;
 import com.usercenter.entity.User;
 import com.usercenter.entity.dto.TeamQuery;
 import com.usercenter.entity.request.TeamAddRequest;
+import com.usercenter.entity.request.TeamJoinRequest;
+import com.usercenter.entity.request.TeamUpdateRequest;
+import com.usercenter.entity.vo.TeamUserVO;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.service.TeamService;
 import com.usercenter.service.UserService;
@@ -67,15 +70,13 @@ public class TeamController {
 
 
     @PutMapping("/update")
-    public BaseResponse<Boolean> updateTeam(@RequestBody Team team) {
-        if (team == null) {
+    public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateRequest teamUpdateRequest) {
+        if (teamUpdateRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean update = teamService.updateById(team);
-        if (!update) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新失败");
-        }
-        return BaseResponse.ok(true);
+
+        return teamService.updateTeam(teamUpdateRequest);
+
     }
 
 
@@ -93,19 +94,22 @@ public class TeamController {
 
     }
 
-    @GetMapping("/list")
-    public BaseResponse<List<Team>> getListTeam(TeamQuery teamQuery) {
-        if (teamQuery == null) {
+    @PostMapping("/join")
+    public BaseResponse<Boolean> joinTeam(@RequestBody TeamJoinRequest teamJoinRequest) {
+        if (teamJoinRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
 
-        Team team = new Team();
-        BeanUtils.copyProperties(teamQuery, team);
-        LambdaQueryWrapper<Team> teamLambdaQueryWrapper = new LambdaQueryWrapper<>(team);
-        List<Team> teamList = teamService.list(teamLambdaQueryWrapper);
+        return teamService.joinTeam(teamJoinRequest, httpServletRequest);
+    }
 
-        return BaseResponse.ok(teamList);
-
+    @GetMapping("/list")
+    public BaseResponse<List<TeamUserVO>> getListTeam(TeamQuery teamQuery, HttpServletRequest request) {
+        if (teamQuery == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        return teamService.listTeams(teamQuery, loginUser);
     }
 
     @GetMapping("/list/page")
