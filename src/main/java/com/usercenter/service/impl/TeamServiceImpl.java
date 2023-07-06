@@ -15,6 +15,7 @@ import com.usercenter.entity.enums.TeamStatusEnum;
 import com.usercenter.entity.request.TeamJoinRequest;
 import com.usercenter.entity.request.TeamQuitRequest;
 import com.usercenter.entity.request.TeamUpdateRequest;
+import com.usercenter.entity.vo.TeamUserInfoVO;
 import com.usercenter.entity.vo.TeamUserVO;
 import com.usercenter.entity.vo.UserVO;
 import com.usercenter.exception.BusinessException;
@@ -33,6 +34,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.usercenter.common.ErrorCode.PARAMS_ERROR;
 import static com.usercenter.constant.RedisConstant.ADD_TEAM_KEY;
 import static com.usercenter.constant.RedisConstant.JOIN_TEAM_LOCK;
 
@@ -173,15 +175,25 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             Integer userRole = loginUser.getUserRole();
             Integer status = teamQuery.getStatus();
             TeamStatusEnum enumByValue = TeamStatusEnum.getEnumByValue(status);
-            if (enumByValue == null) {
-                // 如果没有状态,则默认查询公开的
-                enumByValue = TeamStatusEnum.PUBLIC;
-            }
+            // if (enumByValue == null) {
+            //     // 如果没有状态,则默认查询公开的
+            //     enumByValue = TeamStatusEnum.PUBLIC;
+            // }
             if (!Objects.equals(userRole, 1) && TeamStatusEnum.PRIVATE.equals(enumByValue)) {
                 // 如果不是管理员,并且查看的是私有的
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             }
-            queryWrapper.eq(Team::getStatus, enumByValue.getValue());
+            // 如果指定了查询条件,则拼接条件
+            if (enumByValue != null) {
+                queryWrapper.eq(Team::getStatus, enumByValue.getValue());
+            } else {
+                // 如果没有指定查询条件,则默认查询公开和加密的
+                queryWrapper
+                        .eq(Team::getStatus, TeamStatusEnum.PUBLIC)
+                        .or()
+                        .eq(Team::getStatus, TeamStatusEnum.ENCRYPT);
+
+            }
         }
         queryWrapper.orderByDesc(Team::getCreateTime);
 
@@ -384,7 +396,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
      * @param teamId
      * @return
      */
-    private long getTeamCurrentCountById(Long teamId) {
+    public long getTeamCurrentCountById(Long teamId) {
         LambdaQueryWrapper<UserTeam> userTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
         userTeamLambdaQueryWrapper.eq(UserTeam::getTeamId, teamId);
         return userTeamService.count(userTeamLambdaQueryWrapper);
@@ -500,6 +512,43 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
         // 5. 删除队伍
         return this.removeById(teamId);
+    }
+
+    @Override
+    public BaseResponse<List<TeamUserInfoVO>> getTeamByCurrentUserId(Long id) {
+        if (id == null) {
+            throw new BusinessException(PARAMS_ERROR);
+        }
+        // 1. 在关系表中获取当前用户加入的队伍关系：根据userId查找数据
+        List<UserTeam> userTeams = userTeamService.lambdaQuery().eq(UserTeam::getUserid, id).list();
+        List<Long> teamIds = userTeams.stream().map(UserTeam::getTeamId).collect(Collectors.toList());
+        // 2. 获取该teamId，从team表中获取该队伍的信息
+        List<Team> teams = this.listByIds(teamIds);
+        List<TeamUserInfoVO> teamUserInfoVOS = new ArrayList<>();
+        for (Team team : teams) {
+            TeamUserInfoVO teamUserInfoVO = new TeamUserInfoVO();
+            BeanUtils.copyProperties(team, teamUserInfoVO);
+
+            long teamCurrentCountById = this.getTeamCurrentCountById(team.getId());
+            teamUserInfoVO.setCurrentNum((int) teamCurrentCountById);
+
+            // 3. 在关系表中再根据teamId查找数据
+            List<UserTeam> userTeams1 = userTeamService.lambdaQuery().eq(UserTeam::getTeamId, team.getId()).list();
+            ArrayList<UserVO> members = new ArrayList<>();
+
+            for (UserTeam userTeam : userTeams1) {
+                // 获取该team对应的userId,再查user表中对应的user信息
+                User user = userService.getById(userTeam.getUserid());
+                UserVO member = new UserVO();
+                BeanUtils.copyProperties(user, member);
+                members.add(member);
+            }
+
+            teamUserInfoVO.setMembers(members);
+
+            teamUserInfoVOS.add(teamUserInfoVO);
+        }
+        return BaseResponse.ok(teamUserInfoVOS);
     }
 }
 

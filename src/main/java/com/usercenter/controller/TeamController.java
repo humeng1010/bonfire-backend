@@ -12,6 +12,7 @@ import com.usercenter.entity.request.TeamAddRequest;
 import com.usercenter.entity.request.TeamJoinRequest;
 import com.usercenter.entity.request.TeamQuitRequest;
 import com.usercenter.entity.request.TeamUpdateRequest;
+import com.usercenter.entity.vo.TeamUserInfoVO;
 import com.usercenter.entity.vo.TeamUserVO;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.service.TeamService;
@@ -99,6 +100,13 @@ public class TeamController {
         }
         return BaseResponse.ok(team, "根据id查询成功");
 
+    }
+
+    @GetMapping("/get-by-id")
+    public BaseResponse<List<TeamUserInfoVO>> getTeamByLoginId() {
+        User loginUser = userService.getLoginUser(httpServletRequest);
+
+        return teamService.getTeamByCurrentUserId(loginUser.getId());
     }
 
     @PostMapping("/join")

@@ -8,6 +8,7 @@ import com.usercenter.entity.dto.TeamQuery;
 import com.usercenter.entity.request.TeamJoinRequest;
 import com.usercenter.entity.request.TeamQuitRequest;
 import com.usercenter.entity.request.TeamUpdateRequest;
+import com.usercenter.entity.vo.TeamUserInfoVO;
 import com.usercenter.entity.vo.TeamUserVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -51,4 +52,6 @@ public interface TeamService extends IService<Team> {
      * @return 是否成功
      */
     boolean deleteTeam(long teamId);
+
+    BaseResponse<List<TeamUserInfoVO>> getTeamByCurrentUserId(Long id);
 }
