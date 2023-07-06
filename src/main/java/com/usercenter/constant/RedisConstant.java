@@ -9,4 +9,6 @@ public interface RedisConstant {
 
     String ADD_TEAM_KEY = "user-center:team:lock:";
 
+    String JOIN_TEAM_LOCK = "user-center:join:lock";
+
 }

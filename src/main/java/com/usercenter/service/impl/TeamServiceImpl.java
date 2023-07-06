@@ -34,6 +34,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.usercenter.constant.RedisConstant.ADD_TEAM_KEY;
+import static com.usercenter.constant.RedisConstant.JOIN_TEAM_LOCK;
 
 /**
  * @author humeng
@@ -324,46 +325,54 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             }
         }
 
-        // TODO 考虑加分布式锁防止用户加入超过5个有效的队伍 考虑查询的优化先后顺序 控制加锁的粒度
-        // 1. 用户最多加入 5 个队伍
-        // 根据userId查询关系表中该用户加入了几个有效的队伍
-        // 先查出有几个队伍,获取队伍ID,再根据队伍ID查未过期时间的有几个
-        LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(UserTeam::getUserid, userId);
-        List<UserTeam> userTeams = userTeamService.list(queryWrapper);
-        List<Long> teamIds = userTeams.stream().map(UserTeam::getTeamId).collect(Collectors.toList());
-        // 根据队伍ID查未过期时间的有几个
-        LambdaQueryWrapper<Team> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        teamLambdaQueryWrapper.in(Team::getId, teamIds).lt(Team::getExpireTime, new Date());
-        long count = this.count(teamLambdaQueryWrapper);
-        if (count > 5) {
-            throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX);
+        // 考虑加分布式锁防止用户加入超过5个有效的队伍 考虑查询的优化先后顺序
+        //  TODO 控制加锁的粒度
+        RLock lock = redissonClient.getLock(JOIN_TEAM_LOCK);
+
+        try {
+            lock.lock();
+            // 1. 用户最多加入 5 个队伍
+            // 根据userId查询关系表中该用户加入了几个有效的队伍
+            // 先查出有几个队伍,获取队伍ID,再根据队伍ID查未过期时间的有几个
+            LambdaQueryWrapper<UserTeam> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(UserTeam::getUserid, userId);
+            List<UserTeam> userTeams = userTeamService.list(queryWrapper);
+            List<Long> teamIds = userTeams.stream().map(UserTeam::getTeamId).collect(Collectors.toList());
+            // 根据队伍ID查未过期时间的有几个
+            LambdaQueryWrapper<Team> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+            teamLambdaQueryWrapper.in(Team::getId, teamIds).lt(Team::getExpireTime, new Date());
+            long count = this.count(teamLambdaQueryWrapper);
+            if (count > 5) {
+                throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX);
+            }
+            // 6.禁止加入满员的队伍
+            Integer maxNum = team.getMaxNum();
+            // 获取当前队伍有多少人(多少记录)
+            long currentNum = getTeamCurrentCountById(teamId);
+            if (currentNum >= maxNum) {
+                throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX, "队伍已满");
+            }
+
+            // 7. 不能重复加入已加入的队伍（幂等性）
+            LambdaQueryWrapper<UserTeam> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+            lambdaQueryWrapper.eq(UserTeam::getUserid, userId)
+                    .eq(UserTeam::getTeamId, teamId);
+            long isJoined = userTeamService.count(lambdaQueryWrapper);
+            if (isJoined > 0) {
+                throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX, "你已加入了该队伍,请勿重复加入");
+            }
+
+
+            // 6. 新增队伍 - 用户关联信息
+            UserTeam userTeam = new UserTeam();
+            userTeam.setUserid(userId);
+            userTeam.setTeamId(teamId);
+            userTeam.setJoinTime(new Date());
+
+            return BaseResponse.ok(userTeamService.save(userTeam));
+        } finally {
+            lock.unlock();
         }
-        // 6.禁止加入满员的队伍
-        Integer maxNum = team.getMaxNum();
-        // 获取当前队伍有多少人(多少记录)
-        long currentNum = getTeamCurrentCountById(teamId);
-        if (currentNum >= maxNum) {
-            throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX, "队伍已满");
-        }
-
-        // 7. 不能重复加入已加入的队伍（幂等性）
-        LambdaQueryWrapper<UserTeam> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-        lambdaQueryWrapper.eq(UserTeam::getUserid, userId)
-                .eq(UserTeam::getTeamId, teamId);
-        long isJoined = userTeamService.count(lambdaQueryWrapper);
-        if (isJoined > 0) {
-            throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX, "你已加入了该队伍,请勿重复加入");
-        }
-
-
-        // 6. 新增队伍 - 用户关联信息
-        UserTeam userTeam = new UserTeam();
-        userTeam.setUserid(userId);
-        userTeam.setTeamId(teamId);
-        userTeam.setJoinTime(new Date());
-
-        return BaseResponse.ok(userTeamService.save(userTeam));
 
     }
 
