@@ -57,12 +57,18 @@ public class TeamController {
         return teamService.addTeam(team, loginUser);
     }
 
+    /**
+     * 删除队伍
+     *
+     * @param teamId
+     * @return
+     */
     @DeleteMapping("/delete")
-    public BaseResponse<Boolean> deleteTeam(@RequestBody long id) {
-        if (id <= 0) {
+    public BaseResponse<Boolean> deleteTeam(@RequestBody long teamId) {
+        if (teamId <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean del = teamService.removeById(id);
+        boolean del = teamService.deleteTeam(teamId);
         if (!del) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除失败");
         }

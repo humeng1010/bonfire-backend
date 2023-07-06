@@ -97,8 +97,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码设置不正确");
         }
         Date expireTime = team.getExpireTime();
+
         // 如果当前时间在过期时间之后 说明已经过期了
-        if (new Date().after(expireTime)) {
+        if (expireTime != null && new Date().after(expireTime)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "超时时间大于当前时间");
         }
 
@@ -182,6 +183,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             }
             queryWrapper.eq(Team::getStatus, enumByValue.getValue());
         }
+        queryWrapper.orderByDesc(Team::getCreateTime);
 
         // 查询的所有队伍信息,包括已经过期的队伍
         List<Team> teamList = this.list(queryWrapper);
@@ -468,6 +470,36 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
 
         return BaseResponse.ok(true, message);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteTeam(long teamId) {
+        // 1. 校验请求参数
+        if (teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        // 2. 校验队伍是否存在
+        Team team = this.getById(teamId);
+        if (team == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍不存在");
+        }
+        // 3. 校验你是不是队伍的队长
+        Long userId = team.getUserId();
+        User loginUser = userService.getLoginUser(request);
+        Long loginUserId = loginUser.getId();
+        if (!Objects.equals(userId, loginUserId)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+        // 4. 移除所有加入队伍的关联信息
+        // 根据队伍ID删除关系表的数据
+        boolean result = userTeamService.update().eq("teamId", teamId).remove();
+        if (!result) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "删除队伍失败");
+        }
+
+        // 5. 删除队伍
+        return this.removeById(teamId);
     }
 }
 

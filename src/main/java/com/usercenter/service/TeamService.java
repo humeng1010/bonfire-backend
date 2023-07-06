@@ -44,4 +44,11 @@ public interface TeamService extends IService<Team> {
 
     BaseResponse<Boolean> quitTeam(TeamQuitRequest teamQuitRequest, HttpServletRequest httpServletRequest);
 
+    /**
+     * 删除解散队伍
+     *
+     * @param teamId 队伍id
+     * @return 是否成功
+     */
+    boolean deleteTeam(long teamId);
 }
