@@ -162,7 +162,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             queryWrapper.like(StrUtil.isNotBlank(description), Team::getDescription, description);
 
             String searchText = teamQuery.getSearchText();
-            queryWrapper.like(StrUtil.isNotBlank(searchText), Team::getName, searchText).or()
+            queryWrapper.like(StrUtil.isNotBlank(searchText), Team::getName, searchText)
                     .like(StrUtil.isNotBlank(searchText), Team::getDescription, searchText);
 
             Integer maxNum = teamQuery.getMaxNum();
@@ -175,10 +175,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             Integer userRole = loginUser.getUserRole();
             Integer status = teamQuery.getStatus();
             TeamStatusEnum enumByValue = TeamStatusEnum.getEnumByValue(status);
-            // if (enumByValue == null) {
-            //     // 如果没有状态,则默认查询公开的
-            //     enumByValue = TeamStatusEnum.PUBLIC;
-            // }
+
             if (!Objects.equals(userRole, 1) && TeamStatusEnum.PRIVATE.equals(enumByValue)) {
                 // 如果不是管理员,并且查看的是私有的
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
@@ -188,10 +185,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
                 queryWrapper.eq(Team::getStatus, enumByValue.getValue());
             } else {
                 // 如果没有指定查询条件,则默认查询公开和加密的
-                queryWrapper
-                        .eq(Team::getStatus, TeamStatusEnum.PUBLIC)
-                        .or()
-                        .eq(Team::getStatus, TeamStatusEnum.ENCRYPT);
+                queryWrapper.ne(Team::getStatus, TeamStatusEnum.PRIVATE.getValue());
 
             }
         }
@@ -218,6 +212,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             BeanUtils.copyProperties(effectiveTeam, teamUserVO);
             // 给viewObject设置创建者
             teamUserVO.setCreateUser(userVO);
+            long teamCurrentCountById = this.getTeamCurrentCountById(effectiveTeam.getId());
+            teamUserVO.setCurrentNum(teamCurrentCountById);
 
             teamUserVOS.add(teamUserVO);
 
@@ -514,6 +510,12 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         return this.removeById(teamId);
     }
 
+    /**
+     * 根据当前登录的用户获取加入的队伍信息和成员信息
+     *
+     * @param id userID
+     * @return BaseResponse
+     */
     @Override
     public BaseResponse<List<TeamUserInfoVO>> getTeamByCurrentUserId(Long id) {
         if (id == null) {

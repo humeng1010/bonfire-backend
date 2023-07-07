@@ -21,6 +21,10 @@ public class TeamUserVO {
     private String name;
 
     /**
+     * 队伍头像
+     */
+    private String avatarUrl;
+    /**
      * 描述
      */
     private String description;
@@ -29,6 +33,11 @@ public class TeamUserVO {
      * 最大人数
      */
     private Integer maxNum;
+
+    /**
+     * 当前人数
+     */
+    private long currentNum;
 
     /**
      * 过期时间

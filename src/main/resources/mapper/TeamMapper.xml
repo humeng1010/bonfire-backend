@@ -7,6 +7,7 @@
     <resultMap id="BaseResultMap" type="com.usercenter.entity.Team">
         <id property="id" column="id" jdbcType="BIGINT"/>
         <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="avatarUrl" column="avatarUrl" jdbcType="VARCHAR"/>
         <result property="description" column="description" jdbcType="VARCHAR"/>
         <result property="maxNum" column="maxNum" jdbcType="INTEGER"/>
         <result property="expireTime" column="expireTime" jdbcType="TIMESTAMP"/>
