@@ -17,9 +17,11 @@ import com.usercenter.common.BaseResponse;
 import com.usercenter.common.ErrorCode;
 import com.usercenter.constant.RedisConstant;
 import com.usercenter.entity.User;
+import com.usercenter.entity.vo.UserVO;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.mapper.UserMapper;
 import com.usercenter.service.UserService;
+import com.usercenter.utils.AlgorithmUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -374,6 +376,50 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(NOT_LOGIN_ERROR);
         }
         return (User) userObj;
+    }
+
+    @Override
+    public BaseResponse<List<UserVO>> matchUser(Integer num, User loginUser) {
+        List<User> users = this.list();
+        String tags = loginUser.getTags();
+        List<String> tagList = JSONUtil.toList(tags, String.class);
+
+        HashMap<Integer, Long> indexDistanceMap = new HashMap<>();
+
+        for (int i = 0, usersSize = users.size(); i < usersSize; i++) {
+            User user = users.get(i);
+            String userTags = user.getTags();
+            if (StrUtil.isBlank(userTags)) continue;
+            List<String> userTagList = JSONUtil.toList(userTags, String.class);
+            // 获取编辑距离
+            long distance = AlgorithmUtils.minDistance(tagList, userTagList);
+            // 存放到Map集合
+            indexDistanceMap.put(i, distance);
+        }
+        // 可排序的Map集合,默认根据key排序,这里需要修改为根据value排序
+        indexDistanceMap = indexDistanceMap.entrySet().stream().sorted((o1, o2) -> {
+            Long value1 = o1.getValue();
+            Long value2 = o2.getValue();
+
+            return value1.compareTo(value2);
+        }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+
+
+        // 获取排序好的前num条的key 对应users集合的下标
+        List<Integer> maxDistanceIndexList = indexDistanceMap.keySet().stream()
+                // 过滤掉自己
+                .filter(integer -> !Objects.equals(users.get(integer).getId(), loginUser.getId()))
+                .limit(num).collect(Collectors.toList());
+        ArrayList<UserVO> userVOS = new ArrayList<>();
+        maxDistanceIndexList.forEach(index -> {
+            User user = users.get(index);
+
+            UserVO userVO = new UserVO();
+            BeanUtils.copyProperties(user, userVO);
+            userVOS.add(userVO);
+        });
+
+        return BaseResponse.ok(userVOS);
     }
 
     /**

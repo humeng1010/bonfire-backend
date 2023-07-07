@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.usercenter.common.BaseResponse;
 import com.usercenter.entity.User;
+import com.usercenter.entity.vo.UserVO;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -71,4 +72,6 @@ public interface UserService extends IService<User> {
     BaseResponse<IPage<User>> recommendUsers(Long currentPage, Long pageSize);
 
     User getLoginUser(HttpServletRequest request);
+
+    BaseResponse<List<UserVO>> matchUser(Integer num, User loginUser);
 }
