@@ -380,7 +380,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public BaseResponse<List<UserVO>> matchUser(Integer num, User loginUser) {
-        List<User> users = this.list();
+        // 优化sql,排除标签为空的用户
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.select(User::getId, User::getTags);
+        queryWrapper.isNotNull(User::getTags);
+        List<User> users = this.list(queryWrapper);
         String tags = loginUser.getTags();
         List<String> tagList = JSONUtil.toList(tags, String.class);
 
@@ -389,7 +393,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         for (int i = 0, usersSize = users.size(); i < usersSize; i++) {
             User user = users.get(i);
             String userTags = user.getTags();
-            if (StrUtil.isBlank(userTags)) continue;
+            // 排除空标签和自己
+            if (StrUtil.isBlank(userTags) || Objects.equals(user.getId(), loginUser.getId())) continue;
             List<String> userTagList = JSONUtil.toList(userTags, String.class);
             // 获取编辑距离
             long distance = AlgorithmUtils.minDistance(tagList, userTagList);
@@ -404,15 +409,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return value1.compareTo(value2);
         }).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new));
 
-
         // 获取排序好的前num条的key 对应users集合的下标
         List<Integer> maxDistanceIndexList = indexDistanceMap.keySet().stream()
-                // 过滤掉自己
-                .filter(integer -> !Objects.equals(users.get(integer).getId(), loginUser.getId()))
                 .limit(num).collect(Collectors.toList());
         ArrayList<UserVO> userVOS = new ArrayList<>();
         maxDistanceIndexList.forEach(index -> {
             User user = users.get(index);
+            user = this.getById(user.getId());
 
             UserVO userVO = new UserVO();
             BeanUtils.copyProperties(user, userVO);
