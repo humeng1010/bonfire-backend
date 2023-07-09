@@ -8,6 +8,7 @@ import com.usercenter.constant.UserConstant;
 import com.usercenter.entity.User;
 import com.usercenter.entity.request.UserLoginRequest;
 import com.usercenter.entity.request.UserRegisterRequest;
+import com.usercenter.entity.vo.UserVO;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.service.UserService;
 import io.swagger.annotations.Api;
@@ -187,6 +188,17 @@ public class UserController {
     @GetMapping("/searchUsersByTags")
     public BaseResponse<List<User>> searchAllUsersByTags(@RequestParam(value = "tags") List<String> tags) {
         return userService.searchAllUsersByTags(tags);
+    }
+
+    @GetMapping("/match")
+    public BaseResponse<List<UserVO>> matchUser(@RequestParam Integer num) {
+        if (num <= 0 || num > 20) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(httpServletRequest);
+
+        return userService.matchUser(num, loginUser);
+
     }
 
     /**

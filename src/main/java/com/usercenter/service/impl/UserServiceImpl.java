@@ -31,7 +31,6 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.usercenter.common.ErrorCode.*;
@@ -297,8 +296,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             // 如果普通用户修改的不是自己的信息,则抛出异常
             throw new BusinessException(NO_AUTH_ERROR);
         }
-        this.updateById(user);
+        boolean update = this.updateById(user);
+        if (update) {
+            //    更新缓存
+            if (StrUtil.isNotBlank(user.getTags())) {
+                cacheUser.setTags(user.getTags());
+            }
+            // 当其他的数据修改了需要保存缓存数据的一致性,就继续在在这里 判断和修改
 
+
+            httpServletRequest.getSession().setAttribute(USER_LOGIN_STATUS, cacheUser);
+        }
+        
         return BaseResponse.ok("ok", "修改成功");
     }
 
@@ -330,32 +339,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return BaseResponse.ok(userPage, "默认推荐成功");
         }
 
-        // 读取缓存
-        String key = RedisConstant.USER_RECOMMEND_KEY + currentLoginUser.getId() + ":" + currentPage + "-" + pageSize;
 
-        String resultStr = stringRedisTemplate.opsForValue().get(key);
-        BaseResponse cacheResponse = JSONUtil.toBean(resultStr, BaseResponse.class);
-
-        if (BeanUtil.isNotEmpty(cacheResponse)) {
-            return cacheResponse;
-        }
-
-
-        // 缓存没有,读数据库,然后写缓存
         // 用户登录了,根据用户的标签推荐相同标签的
         String tags = currentLoginUser.getTags();
         Gson gson = new Gson();
         List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
         }.getType());
 
-        BaseResponse<IPage<User>> result = this.searchUsersByTags(currentPage, pageSize, tagList);
-        String resultStrForRedis = gson.toJson(result);
-        try {
-            stringRedisTemplate.opsForValue().set(key, resultStrForRedis, RedisConstant.USER_RECOMMEND_TTL, TimeUnit.MINUTES);
-        } catch (Exception e) {
-            log.error("redis缓存失败");
-        }
-        return result;
+        return this.searchUsersByTags(currentPage, pageSize, tagList);
     }
 
     /**

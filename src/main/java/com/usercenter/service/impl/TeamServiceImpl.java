@@ -348,12 +348,14 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             queryWrapper.eq(UserTeam::getUserid, userId);
             List<UserTeam> userTeams = userTeamService.list(queryWrapper);
             List<Long> teamIds = userTeams.stream().map(UserTeam::getTeamId).collect(Collectors.toList());
-            // 根据队伍ID查未过期时间的有几个
-            LambdaQueryWrapper<Team> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
-            teamLambdaQueryWrapper.in(Team::getId, teamIds).lt(Team::getExpireTime, new Date());
-            long count = this.count(teamLambdaQueryWrapper);
-            if (count > 5) {
-                throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX);
+            if (!teamIds.isEmpty()) {
+                // 根据队伍ID查未过期时间的有几个
+                LambdaQueryWrapper<Team> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+                teamLambdaQueryWrapper.in(Team::getId, teamIds).lt(Team::getExpireTime, new Date());
+                long count = this.count(teamLambdaQueryWrapper);
+                if (count > 5) {
+                    throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX);
+                }
             }
             // 6.禁止加入满员的队伍
             Integer maxNum = team.getMaxNum();
