@@ -1,6 +1,7 @@
 package com.usercenter.service.impl;
 
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -83,6 +84,10 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         if (StrUtil.isBlank(name) || StrUtil.length(name) > 20) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍标题不满足要求");
         }
+        String avatarUrl = team.getAvatarUrl();
+        if (StrUtil.isBlank(avatarUrl)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍必须有头像");
+        }
         String description = team.getDescription();
         if (StrUtil.length(description) > 512) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍描述过长");
@@ -95,7 +100,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍状态不满足要求");
         }
         String password = team.getPassword();
-        if (TeamStatusEnum.ENCRYPT.equals(statusEnum) && (StrUtil.isBlank(password) || password.length() > 32)) {
+        if (TeamStatusEnum.ENCRYPT.equals(statusEnum) && (StrUtil.isBlank(password) || password.length() != 6 || !NumberUtil.isNumber(password))) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码设置不正确");
         }
         Date expireTime = team.getExpireTime();
@@ -284,11 +289,13 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         LambdaUpdateWrapper<Team> updateWrapper = new LambdaUpdateWrapper<>();
 
         String name = teamUpdateRequest.getName();
+        String avatarUrl = teamUpdateRequest.getAvatarUrl();
         String description = teamUpdateRequest.getDescription();
         Integer maxNum = teamUpdateRequest.getMaxNum();
         String password = teamUpdateRequest.getPassword();
         Date expireTime = teamUpdateRequest.getExpireTime();
         updateWrapper.set(StrUtil.isNotBlank(name), Team::getName, name)
+                .set(StrUtil.isNotBlank(avatarUrl), Team::getAvatarUrl, avatarUrl)
                 .set(StrUtil.isNotBlank(description), Team::getDescription, description)
                 .set(maxNum != null && maxNum > 1 && maxNum < 20, Team::getMaxNum, maxNum)
                 .set(enumByValue != null, Team::getStatus, enumByValue.getValue())
@@ -317,7 +324,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
         // 3.禁止加入过期的队伍
         Date expireTime = team.getExpireTime();
-        if (new Date().after(expireTime)) {
+        if (expireTime != null && new Date().after(expireTime)) {
             //    当前时间大于过期时间
             throw new BusinessException(ErrorCode.TEAM_COUNT_OVER_MAX, "队伍已过期");
         }
@@ -552,6 +559,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
 
             teamUserInfoVOS.add(teamUserInfoVO);
         }
+        teamUserInfoVOS.sort((o1, o2) -> DateUtil.compare(o2.getCreateTime(), o1.getCreateTime()));
         return BaseResponse.ok(teamUserInfoVOS);
     }
 }

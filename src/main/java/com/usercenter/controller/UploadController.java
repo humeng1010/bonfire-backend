@@ -86,6 +86,37 @@ public class UploadController {
 
     }
 
+    @ApiImplicitParam(name = "avatar", value = "队伍头像", required = true)
+    @ApiOperation(value = "上传队伍头像")
+    @PostMapping("/upload/team")
+    public BaseResponse<String> uploadTeamAvatar(MultipartFile avatar) {
+        try {
+//            防止目录不存在
+            File file1 = new File(basePath);
+            if (!file1.exists()) {
+                boolean mkdirs = file1.mkdirs();
+                if (!mkdirs)
+                    throw new BusinessException(50008, "服务器创建文件夹失败", "请检查路径是否正确");
+            }
+            String uuid = UUID.randomUUID().toString();
+            String originalFilename = avatar.getOriginalFilename();
+            log.info("文件的原始名称:{}", originalFilename);
+            assert originalFilename != null;
+            // 获取文件后缀 带 .
+            String substring = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String fileName = uuid + substring;
+
+            String filePath = basePath + fileName;
+
+            // 文件转储
+            avatar.transferTo(new File(filePath));
+            return BaseResponse.ok(fileName, "上传文件成功");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
     /**
      * 文件下载
      *

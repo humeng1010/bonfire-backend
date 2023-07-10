@@ -17,6 +17,9 @@ public class TeamAddRequest {
     @ApiModelProperty(value = "队伍名称")
     private String name;
 
+
+    private String avatarUrl;
+
     /**
      * 描述
      */

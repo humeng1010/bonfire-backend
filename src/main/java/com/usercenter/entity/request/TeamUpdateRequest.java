@@ -20,6 +20,8 @@ public class TeamUpdateRequest {
      */
     private String name;
 
+    private String avatarUrl;
+
     /**
      * 描述
      */

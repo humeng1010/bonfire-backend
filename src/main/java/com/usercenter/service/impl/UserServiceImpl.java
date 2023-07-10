@@ -287,15 +287,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         Long userId = user.getId();
         Long cacheUserId = cacheUser.getId();
 
-        if (Objects.equals(cacheUser.getUserRole(), ADMIN_ROLE)) {
-            //    是管理员,直接可以修改所有用户的信息
-            this.updateById(user);
-            return BaseResponse.ok("ok", "修改成功");
-        }
-        if (!Objects.equals(cacheUserId, userId)) {
-            // 如果普通用户修改的不是自己的信息,则抛出异常
+        if (!Objects.equals(cacheUser.getUserRole(), ADMIN_ROLE) && !Objects.equals(cacheUserId, userId)) {
+            //    不是管理员 并且修改的不是自己的 没有权限
             throw new BusinessException(NO_AUTH_ERROR);
         }
+
         boolean update = this.updateById(user);
         if (update) {
             //    更新缓存
@@ -307,7 +303,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
             httpServletRequest.getSession().setAttribute(USER_LOGIN_STATUS, cacheUser);
         }
-        
+
         return BaseResponse.ok("ok", "修改成功");
     }
 
