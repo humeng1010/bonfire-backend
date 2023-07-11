@@ -1,0 +1,65 @@
+version: "3"
+
+services:
+  bonfire_server:
+    image: bonfire:4.0
+    container_name: bonfire_server
+    restart: on-failure:3
+    depends_on:
+      - bonfire_mysql
+      - bonfire_redis
+    networks:
+      bonfire_network:
+    volumes:
+      - ./images/:/app/images/
+    ports:
+      - "8088:8088"
+    environment:
+      - SERVER_PORT=8088
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - SPRING_DATASOURCE_URL=jdbc:mysql://bonfire_mysql:3306/star_project?characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      #     mysql password
+      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_DATABASE=0
+      - SPRING_REDIS_HOST=bonfire_redis
+      #     redis password
+      - SPRING_REDIS_PASSWORD=password
+
+  bonfire_mysql:
+    image: mysql:8.0.28
+    container_name: bonfire_mysql
+    restart: on-failure:3
+    networks:
+      bonfire_network:
+    command: --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+      --explicit_defaults_for_timestamp=true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./mysql:/var/lib/mysql
+      - ./mysqlBackup:/data/mysqlBackup
+    ports:
+      - "3306:3306"
+    environment:
+      #      mysql password 和上面的一致
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=star_project
+
+  bonfire_redis:
+    image: redis
+    container_name: bonfire_redis
+    restart: on-failure:3
+    networks:
+      bonfire_network:
+    volumes:
+      - ./redis/data:/data
+      - ./redis/logs:/logs
+    #    redis password 和上面一致
+    command: redis-server --requirepass password
+    ports:
+      - "6379:6379"
+networks:
+  bonfire_network:
