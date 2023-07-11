@@ -23,6 +23,16 @@ spring:
     port: 6379
     host: localhost
     database: 0
+  flyway:
+    url: ${spring.datasource.url}
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    # 尝试10次连接，防止docker compose启动springboot项目的时候mysql还没有启动完毕
+    connect-retries: 10
+    # 每次重试之间的间隔为10秒
+    connect-retries-interval: 10s
 
 server:
   port: 8080

@@ -1,5 +1,5 @@
 -- auto-generated definition
-create table user
+create table if not exists user
 (
     id           bigint auto_increment comment 'id'
         primary key,
@@ -21,7 +21,7 @@ create table user
     comment '用户表';
 
 -- auto-generated definition
-create table tag
+create table if not exists tag
 (
     id         bigint auto_increment comment 'id'
         primary key,
@@ -38,7 +38,7 @@ create table tag
     comment '标签';
 
 -- auto-generated definition
-create table team
+create table if not exists team
 (
     id          bigint auto_increment comment 'id'
         primary key,
@@ -58,7 +58,7 @@ create table team
 
 
 -- auto-generated definition
-create table user_team
+create table if not exists user_team
 (
     id         bigint auto_increment comment 'id'
         primary key,
