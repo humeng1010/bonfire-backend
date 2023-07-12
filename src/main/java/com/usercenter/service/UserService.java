@@ -71,6 +71,8 @@ public interface UserService extends IService<User> {
 
     BaseResponse<IPage<User>> recommendUsers(Long currentPage, Long pageSize);
 
+    IPage<User> recommendUsersById(Long userId, Long currentPage, Long pageSize);
+
     User getLoginUser(HttpServletRequest request);
 
     BaseResponse<List<UserVO>> matchUser(Integer num, User loginUser);

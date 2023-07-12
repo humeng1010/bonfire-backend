@@ -335,14 +335,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return BaseResponse.ok(userPage, "默认推荐成功");
         }
 
+        // 用户登录了先去查看缓存
+        String key = RedisConstant.USER_RECOMMEND_KEY + currentLoginUser.getId();
+        String json = stringRedisTemplate.opsForValue().get(key);
+        if (StrUtil.isNotBlank(json)) {
+            // 已经缓存预热了
+            Page cacheRes = JSONUtil.toBean(json, Page.class);
+            return BaseResponse.ok(cacheRes);
+        }
 
-        // 用户登录了,根据用户的标签推荐相同标签的
+
+        // 根据用户的标签推荐相同标签的
         String tags = currentLoginUser.getTags();
         Gson gson = new Gson();
         List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
         }.getType());
 
         return this.searchUsersByTags(currentPage, pageSize, tagList);
+    }
+
+    @Override
+    public IPage<User> recommendUsersById(Long userId, Long currentPage, Long pageSize) {
+
+        User user = this.getById(userId);
+        String userTags = user.getTags();
+        if (StrUtil.isBlank(userTags)) {
+            // 用户不存在标签,返回空的数据
+            return new Page<>();
+        }
+
+        Gson gson = new Gson();
+        // 当前用户的标签
+        List<String> tagList = gson.fromJson(userTags, new TypeToken<List<String>>() {
+        }.getType());
+
+        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
+        for (String tag : tagList) {
+            queryWrapper.like(StrUtil.isNotBlank(tag), User::getTags, tag).or();
+        }
+
+        IPage<User> userPage = new Page<>();
+        this.page(userPage, queryWrapper);
+
+        return userPage;
     }
 
     /**
