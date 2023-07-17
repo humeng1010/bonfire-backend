@@ -127,6 +127,9 @@ public class UploadController {
     @ApiOperation("文件下载")
     @GetMapping("/download")
     public void download(@RequestParam String name, HttpServletResponse response) {
+        if (Objects.equals(name, "undefined")) {
+            return;
+        }
         try (
                 // 读取文件
                 FileInputStream fis = new FileInputStream(basePath + name);

@@ -53,3 +53,13 @@ mybatis-plus:
 
 upload-img:
   path: /Users/humeng/Github/user-center-project/images/ # 上传文件路径
+
+upload:
+  #  腾讯云COS配置
+  tengxun:
+    SecretId: 密钥标识
+    SecretKey: 密钥
+    bucket: 桶位置例如ap-beijing
+    bucketName: 桶名称
+    path: 路径
+    prefix: 桶前缀
