@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.usercenter.common.BaseResponse;
 import com.usercenter.entity.User;
+import com.usercenter.entity.vo.UserDistanceVO;
 import com.usercenter.entity.vo.UserVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -76,4 +77,6 @@ public interface UserService extends IService<User> {
     User getLoginUser(HttpServletRequest request);
 
     BaseResponse<List<UserVO>> matchUser(Integer num, User loginUser);
+
+    BaseResponse<IPage<UserDistanceVO>> recommendUsersDistance(Double longitude, Double latitude);
 }

@@ -17,6 +17,7 @@ import com.usercenter.common.BaseResponse;
 import com.usercenter.common.ErrorCode;
 import com.usercenter.constant.RedisConstant;
 import com.usercenter.entity.User;
+import com.usercenter.entity.vo.UserDistanceVO;
 import com.usercenter.entity.vo.UserVO;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.mapper.UserMapper;
@@ -25,7 +26,14 @@ import com.usercenter.utils.AlgorithmUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.geo.Distance;
+import org.springframework.data.geo.GeoResult;
+import org.springframework.data.geo.GeoResults;
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.RedisGeoCommands;
+import org.springframework.data.redis.core.GeoOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.domain.geo.GeoReference;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -445,6 +453,43 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         });
 
         return BaseResponse.ok(userVOS);
+    }
+
+    @Override
+    public BaseResponse<IPage<UserDistanceVO>> recommendUsersDistance(Double longitude, Double latitude) {
+        GeoOperations<String, String> geo = stringRedisTemplate.opsForGeo();
+        User loginUser = this.getLoginUser(httpServletRequest);
+        geo.add("user:geo", new Point(longitude, latitude), loginUser.getId().toString());
+
+        GeoResults<RedisGeoCommands.GeoLocation<String>> results = geo.search("user:geo",
+                GeoReference.fromCoordinate(longitude, latitude),
+                new Distance(50000000),
+                RedisGeoCommands.GeoSearchCommandArgs.newGeoSearchArgs().includeDistance().limit(10));
+
+        IPage<UserDistanceVO> page = new Page<>();
+        if (results == null) {
+            page.setRecords(Collections.emptyList());
+            return BaseResponse.ok(page);
+        }
+        List<GeoResult<RedisGeoCommands.GeoLocation<String>>> content = results.getContent();
+        ArrayList<UserDistanceVO> userVOS = new ArrayList<>();
+        for (GeoResult<RedisGeoCommands.GeoLocation<String>> geoLocationGeoResult : content) {
+            String strId = geoLocationGeoResult.getContent().getName();
+            double value = geoLocationGeoResult.getDistance().getValue();
+            log.info("id:{},dis:{}", strId, value);
+            Long id = Long.parseLong(strId);
+            if (loginUser.getId().equals(id)) {
+                continue;
+            }
+            User user = getById(id);
+            UserDistanceVO target = new UserDistanceVO();
+            BeanUtils.copyProperties(user, target);
+            target.setDistance(value);
+            userVOS.add(target);
+        }
+        page.setRecords(userVOS);
+
+        return BaseResponse.ok(page);
     }
 
     /**

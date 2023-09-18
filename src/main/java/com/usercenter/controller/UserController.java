@@ -8,6 +8,7 @@ import com.usercenter.constant.UserConstant;
 import com.usercenter.entity.User;
 import com.usercenter.entity.request.UserLoginRequest;
 import com.usercenter.entity.request.UserRegisterRequest;
+import com.usercenter.entity.vo.UserDistanceVO;
 import com.usercenter.entity.vo.UserVO;
 import com.usercenter.exception.BusinessException;
 import com.usercenter.service.UserService;
@@ -175,6 +176,14 @@ public class UserController {
             @RequestParam(value = "pageSize", defaultValue = "10", required = false) Long pageSize
     ) {
         return userService.recommendUsers(currentPage, pageSize);
+    }
+
+    @GetMapping("/recommendByDistance")
+    public BaseResponse<IPage<UserDistanceVO>> recommendUsersDistance(
+            @RequestParam(value = "longitude", defaultValue = "114.05956") Double longitude,
+            @RequestParam(value = "latitude", defaultValue = "30.5428599") Double latitude
+    ) {
+        return userService.recommendUsersDistance(longitude, latitude);
     }
 
     @GetMapping("/searchUsersByTagsWithPage")
